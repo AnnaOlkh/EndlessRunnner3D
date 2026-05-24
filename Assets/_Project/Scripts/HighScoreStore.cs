@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class HighScoreStore
@@ -7,11 +8,30 @@ public static class HighScoreStore
 
     public static int[] LoadTopScores()
     {
-        int[] scores = new int[ScoreCount];
+        List<int> uniqueScores = new List<int>();
 
         for (int i = 0; i < ScoreCount; i++)
         {
-            scores[i] = Mathf.Max(0, PlayerPrefs.GetInt(KeyPrefix + i, 0));
+            int score = Mathf.Max(0, PlayerPrefs.GetInt(KeyPrefix + i, 0));
+
+            if (score <= 0)
+            {
+                continue;
+            }
+
+            if (!uniqueScores.Contains(score))
+            {
+                uniqueScores.Add(score);
+            }
+        }
+
+        uniqueScores.Sort((left, right) => right.CompareTo(left));
+
+        int[] scores = new int[ScoreCount];
+
+        for (int i = 0; i < Mathf.Min(ScoreCount, uniqueScores.Count); i++)
+        {
+            scores[i] = uniqueScores[i];
         }
 
         return scores;
@@ -19,13 +39,45 @@ public static class HighScoreStore
 
     public static bool TryAddScore(int score, out int[] updatedScores, out int rank)
     {
-        int[] scores = LoadTopScores();
+        int[] currentScores = LoadTopScores();
 
         rank = -1;
 
+        if (score <= 0)
+        {
+            updatedScores = currentScores;
+            return false;
+        }
+
+        if (ContainsScore(currentScores, score))
+        {
+            updatedScores = currentScores;
+            return false;
+        }
+
+        List<int> candidates = new List<int>();
+
+        for (int i = 0; i < currentScores.Length; i++)
+        {
+            if (currentScores[i] > 0)
+            {
+                candidates.Add(currentScores[i]);
+            }
+        }
+
+        candidates.Add(score);
+        candidates.Sort((left, right) => right.CompareTo(left));
+
+        int[] newScores = new int[ScoreCount];
+
+        for (int i = 0; i < Mathf.Min(ScoreCount, candidates.Count); i++)
+        {
+            newScores[i] = candidates[i];
+        }
+
         for (int i = 0; i < ScoreCount; i++)
         {
-            if (score > scores[i])
+            if (newScores[i] == score)
             {
                 rank = i;
                 break;
@@ -34,20 +86,13 @@ public static class HighScoreStore
 
         if (rank == -1)
         {
-            updatedScores = scores;
+            updatedScores = currentScores;
             return false;
         }
 
-        for (int i = ScoreCount - 1; i > rank; i--)
-        {
-            scores[i] = scores[i - 1];
-        }
+        SaveTopScores(newScores);
 
-        scores[rank] = score;
-
-        SaveTopScores(scores);
-
-        updatedScores = scores;
+        updatedScores = newScores;
         return true;
     }
 
@@ -60,21 +105,34 @@ public static class HighScoreStore
             $"3. {scores[2]}";
     }
 
-    private static void SaveTopScores(int[] scores)
-    {
-        for (int i = 0; i < ScoreCount; i++)
-        {
-            PlayerPrefs.SetInt(KeyPrefix + i, scores[i]);
-        }
-
-        PlayerPrefs.Save();
-    }
-
     public static void Clear()
     {
         for (int i = 0; i < ScoreCount; i++)
         {
             PlayerPrefs.DeleteKey(KeyPrefix + i);
+        }
+
+        PlayerPrefs.Save();
+    }
+
+    private static bool ContainsScore(int[] scores, int targetScore)
+    {
+        for (int i = 0; i < scores.Length; i++)
+        {
+            if (scores[i] == targetScore)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void SaveTopScores(int[] scores)
+    {
+        for (int i = 0; i < ScoreCount; i++)
+        {
+            PlayerPrefs.SetInt(KeyPrefix + i, scores[i]);
         }
 
         PlayerPrefs.Save();
