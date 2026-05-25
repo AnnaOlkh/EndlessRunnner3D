@@ -28,6 +28,14 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private TMP_Text finalTotalCoinsText;
     [SerializeField] private TMP_Text newRecordText;
 
+    [Header("Records UI")]
+    [SerializeField] private GameObject recordsPanel;
+    [SerializeField] private TMP_Text recordsText;
+
+    [Header("Shop UI")]
+    [SerializeField] private GameObject shopPanel;
+    [SerializeField] private TMP_Text shopCoinsText;
+
     private int[] topScores;
     private bool isGameOver;
     private bool isPaused;
@@ -232,6 +240,16 @@ public sealed class GameManager : MonoBehaviour
             newRecordText.gameObject.SetActive(false);
         }
 
+        if (recordsPanel != null)
+        {
+            recordsPanel.SetActive(false);
+        }
+
+        if (shopPanel != null)
+        {
+            shopPanel.SetActive(false);
+        }
+
         UpdateMenuRecordsText();
     }
 
@@ -305,7 +323,73 @@ public sealed class GameManager : MonoBehaviour
             pausePanel.SetActive(false);
         }
     }
+    public void ShowRecords()
+    {
+        if (mainMenuPanel != null)
+        {
+            mainMenuPanel.SetActive(false);
+        }
 
+        if (recordsPanel != null)
+        {
+            recordsPanel.SetActive(true);
+        }
+
+        if (shopPanel != null)
+        {
+            shopPanel.SetActive(false);
+        }
+
+        if (recordsText != null)
+        {
+            int[] scores = HighScoreStore.LoadTopScores();
+            recordsText.text = HighScoreStore.FormatTopScores(scores);
+        }
+    }
+
+    public void ShowShop()
+    {
+        if (mainMenuPanel != null)
+        {
+            mainMenuPanel.SetActive(false);
+        }
+
+        if (recordsPanel != null)
+        {
+            recordsPanel.SetActive(false);
+        }
+
+        if (shopPanel != null)
+        {
+            shopPanel.SetActive(true);
+        }
+
+        if (shopCoinsText != null)
+        {
+            int totalCoins = coinManager != null ? coinManager.TotalCoins : 0;
+            shopCoinsText.text = $"Total coins: {totalCoins}";
+        }
+    }
+
+    public void BackToMainMenuPanel()
+    {
+        if (mainMenuPanel != null)
+        {
+            mainMenuPanel.SetActive(true);
+        }
+
+        if (recordsPanel != null)
+        {
+            recordsPanel.SetActive(false);
+        }
+
+        if (shopPanel != null)
+        {
+            shopPanel.SetActive(false);
+        }
+
+        UpdateMenuRecordsText();
+    }
     [ContextMenu("Debug/Log Top Scores")]
     private void LogTopScoresForDebug()
     {

@@ -21,11 +21,21 @@ public sealed class RoadSpawner : MonoBehaviour
 
     [SerializeField] private int safeSegmentCount = 2;
 
+    [SerializeField] private SkinManager skinManager;
+
     private readonly Queue<GameObject> activeSegments = new Queue<GameObject>();
     private readonly Queue<GameObject> activeObstacles = new Queue<GameObject>();
 
     private float nextSegmentStartZ = 0f;
     private int spawnedSegmentCount = 0;
+
+    private void Awake()
+    {
+        if (skinManager == null)
+        {
+            skinManager = FindFirstObjectByType<SkinManager>();
+        }
+    }
 
     private void Start()
     {
@@ -52,16 +62,18 @@ public sealed class RoadSpawner : MonoBehaviour
         DespawnOldSegments();
         DespawnOldObstacles();
     }
+
     public void ConfigureDifficulty(
-    int groupsPerSegment,
-    float chancePerGroup,
-    float twoLaneChance
-)
+        int groupsPerSegment,
+        float chancePerGroup,
+        float twoLaneChance
+    )
     {
         obstacleGroupsPerSegment = Mathf.Max(1, groupsPerSegment);
         obstacleChancePerGroup = Mathf.Clamp01(chancePerGroup);
         twoLaneObstacleChance = Mathf.Clamp01(twoLaneChance);
     }
+
     private void SpawnSegment()
     {
         float segmentStartZ = nextSegmentStartZ;
@@ -74,6 +86,11 @@ public sealed class RoadSpawner : MonoBehaviour
             spawnPosition,
             Quaternion.identity
         );
+
+        if (skinManager != null)
+        {
+            skinManager.ApplyRoadSkin(segment);
+        }
 
         segment.name = $"RoadSegment_{segmentStartZ:0}";
         activeSegments.Enqueue(segment);
@@ -165,6 +182,11 @@ public sealed class RoadSpawner : MonoBehaviour
             obstaclePosition,
             Quaternion.identity
         );
+
+        if (skinManager != null)
+        {
+            skinManager.ApplyObstacleSkin(obstacle);
+        }
 
         obstacle.name = obstacleName;
         activeObstacles.Enqueue(obstacle);

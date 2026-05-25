@@ -78,4 +78,28 @@ public sealed class CoinManager : MonoBehaviour
 
         coinsText.text = $"Coins: {runCoins}";
     }
+
+    public bool TrySpendCoins(int amount)
+    {
+        int safeAmount = Mathf.Max(0, amount);
+
+        if (safeAmount == 0)
+        {
+            return true;
+        }
+
+        if (totalCoins < safeAmount)
+        {
+            return false;
+        }
+
+        totalCoins -= safeAmount;
+
+        PlayerPrefs.SetInt(TotalCoinsKey, totalCoins);
+        PlayerPrefs.Save();
+
+        UpdateCoinsText();
+
+        return true;
+    }
 }
