@@ -15,16 +15,23 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private TMP_Text menuRecordsText;
 
+    [Header("Gameplay UI")]
+    [SerializeField] private GameObject pauseButton;
+
+    [Header("Pause UI")]
+    [SerializeField] private GameObject pausePanel;
+
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TMP_Text finalScoreText;
-    [SerializeField] private TMP_Text newRecordText;
     [SerializeField] private TMP_Text finalRunCoinsText;
     [SerializeField] private TMP_Text finalTotalCoinsText;
-
+    [SerializeField] private TMP_Text newRecordText;
 
     private int[] topScores;
     private bool isGameOver;
+    private bool isPaused;
+    private bool isGameplayActive;
 
     private void Awake()
     {
@@ -41,11 +48,13 @@ public sealed class GameManager : MonoBehaviour
         {
             scoreManager.HideScore();
         }
+
         if (coinManager != null)
         {
             coinManager.HideCoins();
         }
 
+        HideGameplayUi();
         ShowMainMenu();
 
         if (shouldStartImmediatelyAfterReload)
@@ -57,7 +66,12 @@ public sealed class GameManager : MonoBehaviour
 
     public void StartGame()
     {
+        Time.timeScale = 1f;
+
         isGameOver = false;
+        isPaused = false;
+        isGameplayActive = true;
+
         topScores = HighScoreStore.LoadTopScores();
 
         if (mainMenuPanel != null)
@@ -70,9 +84,19 @@ public sealed class GameManager : MonoBehaviour
             gameOverPanel.SetActive(false);
         }
 
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(false);
+        }
+
         if (newRecordText != null)
         {
             newRecordText.gameObject.SetActive(false);
+        }
+
+        if (pauseButton != null)
+        {
+            pauseButton.SetActive(true);
         }
 
         if (scoreManager != null)
@@ -80,12 +104,55 @@ public sealed class GameManager : MonoBehaviour
             int bestScore = topScores.Length > 0 ? topScores[0] : 0;
             scoreManager.BeginScoring(bestScore);
         }
+
         if (coinManager != null)
         {
             coinManager.BeginCounting();
         }
 
         SetGameplayActive(true);
+    }
+
+    public void PauseGame()
+    {
+        if (!isGameplayActive || isGameOver || isPaused)
+        {
+            return;
+        }
+
+        isPaused = true;
+        Time.timeScale = 0f;
+
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(true);
+        }
+
+        if (pauseButton != null)
+        {
+            pauseButton.SetActive(false);
+        }
+    }
+
+    public void ResumeGame()
+    {
+        if (!isPaused || isGameOver)
+        {
+            return;
+        }
+
+        isPaused = false;
+        Time.timeScale = 1f;
+
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(false);
+        }
+
+        if (pauseButton != null)
+        {
+            pauseButton.SetActive(true);
+        }
     }
 
     public void GameOver()
@@ -95,9 +162,14 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
+        Time.timeScale = 1f;
+
         isGameOver = true;
+        isPaused = false;
+        isGameplayActive = false;
 
         SetGameplayActive(false);
+        HideGameplayUi();
 
         int finalScore = scoreManager != null ? scoreManager.CurrentScore : 0;
 
@@ -105,6 +177,7 @@ public sealed class GameManager : MonoBehaviour
         {
             scoreManager.HideScore();
         }
+
         if (coinManager != null)
         {
             coinManager.HideCoins();
@@ -125,7 +198,15 @@ public sealed class GameManager : MonoBehaviour
 
     public void RestartRun()
     {
+        Time.timeScale = 1f;
         shouldStartImmediatelyAfterReload = true;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void ReturnToMenu()
+    {
+        Time.timeScale = 1f;
+        shouldStartImmediatelyAfterReload = false;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -139,6 +220,11 @@ public sealed class GameManager : MonoBehaviour
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(false);
+        }
+
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(false);
         }
 
         if (newRecordText != null)
@@ -161,15 +247,6 @@ public sealed class GameManager : MonoBehaviour
             finalScoreText.text = $"Your score: {finalScore}";
         }
 
-        if (newRecordText != null)
-        {
-            newRecordText.gameObject.SetActive(isNewBestRecord);
-
-            if (isNewBestRecord)
-            {
-                newRecordText.text = $"New record: {finalScore}";
-            }
-        }
         if (finalRunCoinsText != null)
         {
             int runCoins = coinManager != null ? coinManager.RunCoins : 0;
@@ -182,7 +259,19 @@ public sealed class GameManager : MonoBehaviour
             finalTotalCoinsText.text = $"Total coins: {totalCoins}";
         }
 
+        if (newRecordText != null)
+        {
+            newRecordText.gameObject.SetActive(isNewBestRecord);
+
+            if (isNewBestRecord)
+            {
+                newRecordText.text = "New record!";
+            }
+        }
+
         Debug.Log($"Game Over. Final score: {finalScore}");
+        Debug.Log($"Run coins: {(coinManager != null ? coinManager.RunCoins : 0)}");
+        Debug.Log($"Total coins: {(coinManager != null ? coinManager.TotalCoins : 0)}");
         Debug.Log(HighScoreStore.FormatTopScores(topScores));
     }
 
@@ -204,6 +293,19 @@ public sealed class GameManager : MonoBehaviour
         }
     }
 
+    private void HideGameplayUi()
+    {
+        if (pauseButton != null)
+        {
+            pauseButton.SetActive(false);
+        }
+
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(false);
+        }
+    }
+
     [ContextMenu("Debug/Log Top Scores")]
     private void LogTopScoresForDebug()
     {
@@ -218,5 +320,16 @@ public sealed class GameManager : MonoBehaviour
         topScores = HighScoreStore.LoadTopScores();
         UpdateMenuRecordsText();
         Debug.Log("Top scores cleared.");
+    }
+
+    [ContextMenu("Debug/Clear Total Coins")]
+    private void ClearTotalCoinsForDebug()
+    {
+        if (coinManager != null)
+        {
+            coinManager.ClearTotalCoins();
+        }
+
+        Debug.Log("Total coins cleared.");
     }
 }
